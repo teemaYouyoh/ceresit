@@ -163,7 +163,14 @@ function VideoChat(props) {
         console.log("userVideoBg", userVideoBg);
 
         if (userVideo.current !== undefined) {
-          userVideo.current.srcObject = stream
+          let video = document.getElementById("main_video");
+
+          if (video !== null) {
+            video.srcObject = stream;
+            video.play();
+          }
+
+          // userVideo.current.srcObject = stream
           console.log(userVideo);
         }
 
@@ -268,7 +275,7 @@ function VideoChat(props) {
     window.clearInterval(timerId.current)
   }
 
- 
+
 
   const checkCall = (stream) => {
     if (props.location.user.id) {
@@ -387,7 +394,7 @@ function VideoChat(props) {
     delta -= hours * 3600;
     let minutes = Math.floor(delta / 60) % 60;
     delta -= minutes * 60;
-    let seconds = Math.floor(delta % 60);  
+    let seconds = Math.floor(delta % 60);
 
     if (hours < 10) hours = `0${hours}`;
     if (minutes < 10) minutes = `0${minutes}`;
@@ -450,7 +457,7 @@ function VideoChat(props) {
     launchFullScreen(document.getElementById('main_video'));
   }
 
-  
+
   const showVolumeChanger = () => {
     if (document.body.classList.contains('show_volume') === false) {
       document.body.classList.add('show_volume');
@@ -465,20 +472,7 @@ function VideoChat(props) {
   }
 
 
-  const changeBackground = (style) => {
-    let root = document.getElementById('root');
-
-    if (style == 1) root.style.backgroundColor = 'grey';
-    else if (style == 2) root.style.backgroundColor = 'white';
-
-    if (userId !== undefined) {
-      socket.emit('changeBackground', {
-        to: userId,
-        style
-      });
-    }
-  }
-
+  // Вывод обработанного видео с BG
   const setVirtualBackgroudStream = (value) => {
     let video;
 
@@ -494,6 +488,7 @@ function VideoChat(props) {
     }
   }
 
+  // Отправка видео с новым BG пользователю через сокет 
   const socketEmitChangeBackground = (stream) => {
 
     const peer = new Peer({
@@ -503,7 +498,7 @@ function VideoChat(props) {
     })
 
     peer.on("signal", (data) => {
-      console.log(stream);
+      console.log("signal", stream);
       socket.emit("changeBackground", {
         userToCall: userId,
         signalData: data,
@@ -512,7 +507,7 @@ function VideoChat(props) {
       })
     })
     peer.on("stream", (stream) => {
-      console.log(stream);
+      console.log("stream", stream);
       userVideo.current.srcObject = stream
     })
     socket.on("backgroundChangeAccepted", (data) => {
@@ -522,16 +517,18 @@ function VideoChat(props) {
     connectionRef.current = peer
   }
 
+  // Функция, которая подвязывается к модулю смены BG 
   const onEvent = (event) => {
     setBlurredStream(event.stream);
 
     if (event.event === "READY") {
       setVirtualBackgroudStream(event.stream);
-      // socketEmitChangeBackground(event.stream);
+      socketEmitChangeBackground(event.stream);
 
     }
   }
 
+  // Смена BG
   const changeVirtualBackground = () => {
     if (virtualBackgroud === "none") {
       setVirtualBackgroudStream(stream);
@@ -540,7 +537,7 @@ function VideoChat(props) {
     } else if (virtualBackgroud === "blur") {
       if (start) {
         setVirtualBackgroudStream(blurredStream);
-        // socketEmitChangeBackground(blurredStream);
+        socketEmitChangeBackground(blurredStream);
 
       }
       setStart(true);
@@ -549,6 +546,7 @@ function VideoChat(props) {
     onChangeBgClick();
   }
 
+  // Открытие\закрытие модального окна со сменой BG
   const onChangeBgClick = () => {
     if (document.body.classList.contains('active_dublicate') === false) {
       document.getElementById('modal__bg').style.display = 'flex';
@@ -641,15 +639,18 @@ function VideoChat(props) {
                 null
               }
 
-
+              {/* Тестовое видео */}
               <video style={{ "display": "none" }} className={"triple-slide__carousel-item video_slider main_video"} ref={userVideoBg} playsInline autoPlay />
 
+              {/* Видео собеседника */}
               <video id="main_video" className={"triple-slide__carousel-item video_slider main_video"} ref={userVideo} playsInline autoPlay />
 
+              {/* Моё видео */}
               {stream && <video id="small_video" className="triple-slide__carousel-item video_slider small_video" ref={myVideo} playsInline autoPlay muted />}
 
               {/* <video className="triple-slide__carousel-item video_slider main_video" ref={userVideoBg} playsInline autoPlay muted /> */}
 
+              {/* Модуль, который захватывает видео при включении размытия, обрабатывает и прокидывет готовое видео через onEvent */}
               <BodyPixReactView options={options} visible={visible} start={start} onEvent={onEvent} style={{ "height": "0px" }} />
 
 
