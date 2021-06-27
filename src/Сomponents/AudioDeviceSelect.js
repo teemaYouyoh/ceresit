@@ -46,6 +46,10 @@ const AudioDeviceSelect = (props) => {
   };
 
   useEffect(() => {
+  }, [availableDevices])
+
+
+  useEffect(() => {
 
     navigator.mediaDevices.enumerateDevices().then(devices => {
       let options = [];
@@ -60,7 +64,7 @@ const AudioDeviceSelect = (props) => {
         setAvailableDevices(options);
         props.setSelectedAudioDevice(options[0].value);
       }
-    });
+    }).catch(err => console.log("err", err));
 
   }, [props.isAllowUsingDevices])
 

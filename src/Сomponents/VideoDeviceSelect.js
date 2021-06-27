@@ -63,9 +63,12 @@ const VideoDeviceSelect = (props) => {
         props.setSelectedVideoDevice(options[0].value);
       }
 
-    });
+    }).catch(err => console.log("err", err));
 
   }, [props.isAllowUsingDevices])
+
+  useEffect(() => {
+  }, [availableDevices])
 
   const handleMenuItemClick = (value) => {
     props.setSelectedVideoDevice(value);

@@ -99,7 +99,13 @@ function VideoChat(props) {
     if (timer === 0) {
 
       clear();
-      window.location.href = "/";
+
+      setIsMessageSended(false);
+
+      document.getElementById('modal__timeout').style.display = 'flex';
+      document.getElementById('modal__timeout').style.opacity = '1';
+
+      // window.location.href = "/";
     }
 
   }, [timer])
@@ -107,6 +113,9 @@ function VideoChat(props) {
   useEffect(async () => {
     await sokectOnCall();
   }, [])
+  useEffect(() => {
+    console.log(isWaiting);
+  }, [isWaiting])
 
   useEffect(() => {
     checkCall(stream);
@@ -159,19 +168,15 @@ function VideoChat(props) {
         socket.emit("answerBackgroundChange", { signal: data, to: caller })
       })
       peer.on("stream", (stream) => {
-        console.log("bgStream", stream);
-        console.log("userVideoBg", userVideoBg);
 
         if (userVideo.current !== undefined) {
           let video = document.getElementById("main_video");
-
           if (video !== null) {
             video.srcObject = stream;
             video.play();
           }
 
           // userVideo.current.srcObject = stream
-          console.log(userVideo);
         }
 
       })
@@ -190,10 +195,12 @@ function VideoChat(props) {
   }, [isReverseVideo])
 
 
-  const getUserMedia = async () => {
-    await navigator.mediaDevices.getUserMedia({ video: { deviceId: props.location.selectedVideoDevice }, audio: { deviceId: props.location.selectedAudioDevice } }).then(async (stream_res) => {
-      await setStream(stream_res)
+  const getUserMedia = () => {
+    navigator.mediaDevices.getUserMedia({ video: { deviceId: props.location.selectedVideoDevice }, audio: { deviceId: props.location.selectedAudioDevice } })
+    .then( async (stream_res) => {
       let recorder = new MediaRecorder(stream_res);
+
+      await setStream(stream_res)
       setRecorder(recorder);
     })
   }
@@ -216,16 +223,15 @@ function VideoChat(props) {
         let href = `${window.location.origin}/?id=${id}`;
         let message = `<b>Консультант:</b> ${consultant.nick} %0A%0AПолзователь: ${name} %0AТелефон: ${phone} %0A%0A<a href="${href}">${href}</a>`;
 
-        let url = `https://api.telegram.org/bot1752464306:AAGL94oQ4TE3WnKPQnNQHQyR2acdsd8CSTg/sendMessage?chat_id=-1001286130652&parse_mode=html&text=${message}`;
+        let url = `https://api.telegram.org/bot1752464306:AAFS4oQfbgTApz1yjHiwBp7BfoK4KUaNVOM/sendMessage?chat_id=-1001286130652&parse_mode=html&text=${message}`;
 
-        fetch(`https://api.telegram.org/bot1752464306:AAGL94oQ4TE3WnKPQnNQHQyR2acdsd8CSTg/sendMessage?chat_id=-1001286130652&parse_mode=html&text=${message}`, {
+        fetch(`https://api.telegram.org/bot1752464306:AAFS4oQfbgTApz1yjHiwBp7BfoK4KUaNVOM/sendMessage?chat_id=-1001286130652&parse_mode=html&text=${message}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           }
         }).then((response) => {
           if (!response.ok) {
-            alert('Произошла ошибка! Попробуйте ещё раз.');
             history.push({
               pathname: "/"
             })
@@ -233,10 +239,16 @@ function VideoChat(props) {
         })
 
       } else {
-        alert('В данный момент нет свободных консультантов. Попробуйте позже.');
-        history.push({
-          pathname: "/"
-        })
+        setIsMessageSended(false);
+        setTimer(0);
+
+        document.getElementById('modal__timeout').style.display = 'flex';
+        document.getElementById('modal__timeout').style.opacity = '1';
+
+        // alert('В данный момент нет свободных консультантов. Попробуйте позже.');
+        // history.push({
+        //   pathname: "/"
+        // })
       }
     })
   }
@@ -315,8 +327,6 @@ function VideoChat(props) {
       })
     })
     peer.on("stream", (stream) => {
-      console.log("call", stream);
-      console.log("callStream", stream);
       userVideo.current.srcObject = stream
     })
     socket.on("callAccepted", (data) => {
@@ -346,12 +356,10 @@ function VideoChat(props) {
       socket.emit("answerCall", { signal: data, to: caller, user: { name: name, phone: phone } })
     })
     peer.on("stream", (stream) => {
-      console.log("answer", stream);
       if (userVideo.current !== undefined) {
         userVideo.current.srcObject = stream
       }
     })
-
     peer.signal(callerSignal)
     connectionRef.current = peer
 
@@ -498,7 +506,6 @@ function VideoChat(props) {
     })
 
     peer.on("signal", (data) => {
-      console.log("signal", stream);
       socket.emit("changeBackground", {
         userToCall: userId,
         signalData: data,
@@ -507,7 +514,6 @@ function VideoChat(props) {
       })
     })
     peer.on("stream", (stream) => {
-      console.log("stream", stream);
       userVideo.current.srcObject = stream
     })
     socket.on("backgroundChangeAccepted", (data) => {
@@ -557,9 +563,69 @@ function VideoChat(props) {
     }
   }
 
+  const modalOnAgree = () => {
+    // window.location.href = "/";
+
+    document.getElementById('modal__timeout').style.display = 'none';
+    document.getElementById('modal__timeout').style.opacity = '0';
+
+    if (socket.id !== undefined && !isMessageSended) {
+      sendLinkToConsultant(socket.id);
+      setIsMessageSended(true);
+    }
+
+    setTimer(100);
+
+    timerId.current = window.setInterval(() => {
+      setTimer((time) => time - 1)
+    }, 1000)
+    return () => clear();
+  }
+
 
   return (
     <>
+
+      <div id="modal__timeout" className="modal__ modal-style">
+        <div className="modal-style-wr">
+          <div className="modal-style-cnt">
+
+            <div className="modal-content f-c-c-s">
+
+              <div className="modal_header w-100 f-r-c-s">
+
+                <div className="modal_header_img f-r-c-c">
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M29.9106 11.2228L32.8274 7.47162L28.5283 3.1725L24.7771 6.08934C23.7812 5.51974 22.7265 5.08205 21.6295 4.78027L21.0405 0H14.9595L14.3704 4.78034C13.2735 5.08212 12.2188 5.51988 11.2228 6.08941L7.47162 3.17257L3.1725 7.47169L6.08934 11.2229C5.51974 12.2188 5.08205 13.2735 4.78027 14.3705L0 14.9595V21.0405L4.78034 21.6296C5.08212 22.7265 5.51988 23.7812 6.08941 24.7772L3.17257 28.5284L7.47169 32.8275L11.2229 29.9107C12.2188 30.4803 13.2735 30.918 14.3705 31.2197L14.9595 36H21.0405L21.6296 31.2197C22.7265 30.9179 23.7812 30.4801 24.7772 29.9106L28.5284 32.8274L32.8275 28.5283L29.9107 24.7771C30.4803 23.7812 30.918 22.7265 31.2197 21.6295L36 21.0405V14.9595L31.2197 14.3704C30.9179 13.2735 30.4801 12.2188 29.9106 11.2228ZM18 27.4922C12.7657 27.4922 8.50781 23.2343 8.50781 18C8.50781 12.7657 12.7657 8.50781 18 8.50781C23.2343 8.50781 27.4922 12.7657 27.4922 18C27.4922 23.2343 23.2343 27.4922 18 27.4922Z"
+                      fill="white" />
+                    <path
+                      d="M20.0569 14.8359C19.1742 14.8359 18.4965 15.1542 18.0001 15.5765C17.5036 15.1542 16.8259 14.8359 15.9432 14.8359C14.1985 14.8359 12.8317 16.1069 12.8317 17.7301C12.8317 19.4482 14.2983 20.4688 16.3274 21.8809L18.0001 23.0633L19.6727 21.881C21.7017 20.4689 23.1684 19.4482 23.1684 17.7302C23.1684 16.1069 21.8016 14.8359 20.0569 14.8359Z"
+                      fill="white" />
+                  </svg>
+                </div>
+
+                <h4>Вибач, зараз всі оператори зайняті. Спробуйте під'єднатися ще раз</h4>
+              </div>
+
+
+              <div className="sbmt sbmt_recall w-100">
+                <button className="w-100" onClick={modalOnAgree}>
+                  Під'єднатися
+                </button>
+              </div>
+              <div className="btn-grey w-100">
+                <button className="w-100" onClick={() => { history.push({ "pathname": "/" }) }}>
+                  На головну
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       <ChangeBackgroundModal
         setVirtualBackgroud={setVirtualBackgroud}
@@ -603,7 +669,7 @@ function VideoChat(props) {
               {userId !== undefined ?
                 (
                   <div id="btn_change-bg" onClick={onChangeBgClick}>
-                    <button>
+                    {/* <button>
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M3.67832 0L-3.33334 7.01167V4.655L1.32166 0H3.67832Z" fill="white" />
                         <path d="M15.345 0L12.905 2.44C12.374 2.13452 11.798 1.91513 11.1983 1.79L12.9883 0H15.345Z"
@@ -632,7 +698,7 @@ function VideoChat(props) {
                           fill="white" />
                         <path d="M9.51166 0L-3.33334 12.845V10.4883L7.15499 0H9.51166Z" fill="white" />
                       </svg>
-                    </button>
+                    </button> */}
                   </div>
                 )
                 :
@@ -640,7 +706,6 @@ function VideoChat(props) {
               }
 
               {/* Тестовое видео */}
-              <video style={{ "display": "none" }} className={"triple-slide__carousel-item video_slider main_video"} ref={userVideoBg} playsInline autoPlay />
 
               {/* Видео собеседника */}
               <video id="main_video" className={"triple-slide__carousel-item video_slider main_video"} ref={userVideo} playsInline autoPlay />

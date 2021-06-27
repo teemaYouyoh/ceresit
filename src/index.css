@@ -827,6 +827,8 @@ form  .input{
 }
 
 /* modal */
+#modal__thanks,
+#modal__timeout,
 #modal__ {
   display: none;
   opacity: 0;

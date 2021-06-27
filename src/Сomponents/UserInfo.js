@@ -12,14 +12,17 @@ const UserInfo = (props) => {
 
   const [me, setMe] = useState("")
   const [userId, setUserId] = useState(null)
-  const [name, setName] = useState("")
-  const [phone, setPhone] = useState("")
+  const [name, setName] = useState("admin")
+  const [phone, setPhone] = useState("+380000000000")
 
   const [selectedAudioDevice, setSelectedAudioDevice] = useState(null);
   const [selectedVideoDevice, setSelectedVideoDevice] = useState(null);
   const [isAllowUsingDevices, setIsAllowUsingDevices] = useState(false);
-  const [isPoliceAgree, setIsPoliceAgree] = useState(false);
+  const [isPoliceAgree, setIsPoliceAgree] = useState(true);
   const [isValid, setIsValid] = useState(true);
+
+  const [stream, setStream] = useState("")
+
 
   useEffect(() => {
     let urlParams = new URLSearchParams(window.location.search);
@@ -44,13 +47,35 @@ const UserInfo = (props) => {
     let id = urlParams.get('id');
     setUserId(id);
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then((res) => {
-        setIsAllowUsingDevices(true);
-      })
-      .catch((err) => {
-        setIsAllowUsingDevices(false);
-      })
+    const platform = navigator.platform.toLowerCase();
+    const iosPlatforms = ['iphone', 'ipad', 'ipod', 'ipod touch'];
+
+    // Checking if device is IOS 
+    if (iosPlatforms.includes(platform)) {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then( async (stream) => {
+          await setStream(stream)
+          setIsAllowUsingDevices(true);
+        } )
+        .catch((err) => {
+          setIsAllowUsingDevices(false);
+        })
+
+    } else {
+      navigator.getUserMedia = navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia;
+
+      if (navigator.getUserMedia) {
+        navigator.getUserMedia({ video: true, audio: true }, async function (stream) {
+          await setStream(stream)
+          setIsAllowUsingDevices(true);
+        }, function (err) {
+          setIsAllowUsingDevices(false);
+        })
+
+      }
+    }
 
     socket.on("me", (id) => {
       setMe(id);
@@ -67,15 +92,17 @@ const UserInfo = (props) => {
     if (userId !== null) {
       user.id = userId;
     } else {
-      localStorage.setItem('user', JSON.stringify({name, phone}));
+      localStorage.setItem('user', JSON.stringify({ name, phone }));
     }
 
-    if ( name === "" && userId == null ) setIsValid(false);
-    else if ( phone === "" && userId == null ) setIsValid(false);
+    if (name === "" && userId == null) setIsValid(false);
+    else if (phone === "" && userId == null) setIsValid(false);
     // else if ( selectedAudioDevice === null ) alert('Выберите аудио-устройство!');
     // else if ( selectedVideoDevice === null ) alert('Выберите видео-устройство!');
-    else if ( !isPoliceAgree && userId === null ) setIsValid(false);
+    else if (!isPoliceAgree && userId === null) setIsValid(false);
     else {
+
+
       history.push({
         pathname: '/chat',
         socket,
@@ -104,7 +131,7 @@ const UserInfo = (props) => {
               {!userId ?
                 (
                   <>
-                    <div className={ !isValid && name === ""  ? "input w-100 error" : "input w-100"}>
+                    <div className={!isValid && name === "" ? "input w-100 error" : "input w-100"}>
                       <label className="w-100 f-r-str-s">
                         <div className="input_svg f-r-c-c">
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -123,7 +150,7 @@ const UserInfo = (props) => {
                       </label>
                     </div>
 
-                    <div className={ !isValid && phone === ""  ? "input w-100 error" : "input w-100"}>
+                    <div className={!isValid && phone === "" ? "input w-100 error" : "input w-100"}>
                       <label className="w-100 f-r-str-s">
                         <div className="input_svg f-r-c-c">
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
